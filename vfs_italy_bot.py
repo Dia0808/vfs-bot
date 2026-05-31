@@ -38,14 +38,36 @@ def send_telegram(message: str):
         "text": message,
         "parse_mode": "HTML"
     }
+    # جرب بدون proxy أولاً
     try:
-        response = requests.post(url, json=data, timeout=10)
+        response = requests.post(url, json=data, timeout=15)
         if response.status_code == 200:
             print(f"[{now()}] ✅ Telegram message sent")
-        else:
-            print(f"[{now()}] ❌ Telegram error: {response.text}")
+            return True
     except Exception as e:
-        print(f"[{now()}] ❌ Telegram exception: {e}")
+        print(f"[{now()}] ⚠️ Direct failed: {e}")
+
+    # جرب مع proxy مجاني
+    proxies_list = [
+        "socks5://proxy.torproject.org:9050",
+        "http://51.158.68.68:8811",
+        "http://51.77.141.29:3128",
+    ]
+    for proxy in proxies_list:
+        try:
+            response = requests.post(
+                url, json=data, timeout=15,
+                proxies={"http": proxy, "https": proxy}
+            )
+            if response.status_code == 200:
+                print(f"[{now()}] ✅ Sent via proxy: {proxy}")
+                return True
+        except Exception as e:
+            print(f"[{now()}] ❌ Proxy {proxy} failed: {e}")
+            continue
+
+    print(f"[{now()}] ❌ All methods failed")
+    return False
 
 
 def now():
@@ -93,7 +115,6 @@ def check_slots():
                     f"⏰ {now()}"
                 )
                 send_telegram(message)
-                print(f"[{now()}] 🎉 SLOTS AVAILABLE!")
 
             elif not slots_available and last_status != "none":
                 last_status = "none"
@@ -103,11 +124,11 @@ def check_slots():
             print(f"[{now()}] ⚠️ HTTP {response.status_code}")
 
     except requests.exceptions.ConnectionError:
-        print(f"[{now()}] ❌ Connection error")
+        print(f"[{now()}] ❌ Connection error - VFS blocked")
     except requests.exceptions.Timeout:
         print(f"[{now()}] ⏱️ Timeout")
     except json.JSONDecodeError:
-        print(f"[{now()}] ⚠️ Invalid JSON response")
+        print(f"[{now()}] ⚠️ Invalid JSON")
     except Exception as e:
         print(f"[{now()}] ❌ Error: {e}")
 
